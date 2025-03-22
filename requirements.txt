@@ -1,6 +1,5 @@
 streamlit
 transformers
-torch
+torch==2.0.1
 gtts
 requests
-openai 
