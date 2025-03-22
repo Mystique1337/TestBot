@@ -1,19 +1,9 @@
 import streamlit as st
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+import openai
+import requests
 from gtts import gTTS
 from io import BytesIO
 import base64
-import requests
-
-# Load Mistral-7B-Instruct model (open-source, no login needed)
-@st.cache_resource
-def load_mistral_model():
-    model_name = "tiiuae/falcon-7b-instruct"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
-    return pipeline("text-generation", model=model, tokenizer=tokenizer)
-
-llm = load_mistral_model()
 
 # Function to fetch a Bible verse from an API
 def fetch_bible_verse(reference):
@@ -27,26 +17,33 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Function to explain Bible verse using Mistral
+# Function to explain Bible verse using OpenAI GPT-4
+def explain_bible_verse_openai(verse_text, api_key):
+    openai.api_key = api_key
 
-def explain_bible_verse_mistral(verse_text):
-    prompt = (
-        f"[INST]You are a kind and wise Bible teacher. Read the verse below and explain it clearly. "
-        f"Include a practical example and highlight the moral lessons.\n\n"
-        f"BIBLE VERSE:\n\"{verse_text}\"\n\n"
-        f"EXPLANATION:[/INST]"
+    system_prompt = (
+        "You are a thoughtful and compassionate Bible teacher. "
+        "Explain the Bible verse provided in clear, detailed language. "
+        "Include a real-life example and a moral lesson."
     )
 
-    result = llm(
-        prompt,
-        max_new_tokens=350,
-        do_sample=True,
+    user_prompt = (
+        f"Bible Verse:\n\"{verse_text}\"\n\n"
+        "Please explain this verse like a pastor teaching a congregation. "
+        "Make it easy to understand, include a real-life example, and highlight the moral lessons."
+    )
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
         temperature=0.7,
-        top_p=0.95,
-        top_k=50
+        max_tokens=500
     )
 
-    explanation = result[0]['generated_text'].replace(prompt, "").strip()
+    explanation = response['choices'][0]['message']['content'].strip()
     return explanation
 
 # Function to convert explanation to speech
@@ -66,26 +63,27 @@ def get_audio_download_link(audio_bytes, filename):
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer with Moral Lessons (Powered by Mistral 7B)")
+    st.title("📖 Bible Verse Explainer with GPT-4")
 
     st.write("""
     Welcome! This app allows you to:
     1. Enter a Bible verse reference (e.g., John 3:16)
     2. Automatically fetch and display the verse
-    3. Get a detailed explanation with real-life examples and moral lessons
+    3. Get a detailed explanation with real-life examples and moral lessons (Powered by GPT-4)
     4. Listen to the explanation and download it as audio
     """)
 
     st.markdown("""
     🔎 **Tips for Quality Inputs:**
-    - Use standard formats like `John 3:16`, `Genesis 1:1`, or `Psalm 23:1`.
-    - Ensure the book name is spelled correctly.
-    - Use only one verse reference at a time for best results.
+    - Use standard formats like `John 3:16`, `Genesis 1:1`, or `Psalm 23:1`
+    - Ensure the book name is spelled correctly
+    - Use only one verse reference at a time
     """)
 
+    openai_api_key = st.text_input("🔐 Enter your OpenAI API Key:", type="password")
     verse_ref = st.text_input("🔍 Enter Bible Verse Reference (e.g., John 3:16):")
 
-    if verse_ref:
+    if verse_ref and openai_api_key:
         with st.spinner("Fetching verse..."):
             verse_text = fetch_bible_verse(verse_ref)
 
@@ -93,8 +91,8 @@ def main():
             st.subheader("📜 Bible Verse")
             st.write(verse_text)
 
-            with st.spinner("Generating explanation with Mistral..."):
-                explanation = explain_bible_verse_mistral(verse_text)
+            with st.spinner("Generating explanation using GPT-4..."):
+                explanation = explain_bible_verse_openai(verse_text, openai_api_key)
             st.subheader("💬 Explanation")
             st.write(explanation)
 
@@ -107,7 +105,7 @@ def main():
         else:
             st.error(verse_text)
     else:
-        st.info("Please enter a Bible verse reference above to begin.")
+        st.info("Please enter your OpenAI API key and a Bible verse reference above to begin.")
 
 if __name__ == '__main__':
     main()
