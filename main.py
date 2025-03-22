@@ -17,15 +17,52 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Load summarization pipeline
-def explain_bible_verse_detailed(verse_text):
-    summarizer = pipeline("summarization")
-    base_explanation = summarizer(verse_text, max_length=200, min_length=100)[0]['summary_text']
 
-    detailed_explanation = (
-        f"This Bible verse means: {base_explanation}\n\n"
-    )
-    return detailed_explanation
+
+
+def explain_bible_verse_detailed(verse_text):
+    """
+    This function provides a detailed, context-rich explanation of a Bible verse using an advanced LLM.
+    It generates a summary, then crafts a detailed explanation with real-life examples and moral lessons.
+    """
+    try:
+        # Load the summarization pipeline
+        summarizer = pipeline("summarization")
+        
+        # Generate a detailed, natural summary
+        explanation_summary = summarizer(
+            verse_text,
+            max_length=120,
+            min_length=60,
+            do_sample=False
+        )[0]['summary_text']
+
+        # Build a context-rich, AI-driven teaching explanation
+        full_explanation_prompt = (
+            f"The following Bible verse is:\n\n\"{verse_text}\"\n\n"
+            f"Summarize it, explain it in detail like a pastor teaching a congregation, "
+            f"include real-life examples that help people relate to it, and highlight moral lessons from it.\n\n"
+            f"Here’s a summary: {explanation_summary}\n\n"
+            f"Now write a thoughtful explanation."
+        )
+
+        # Use a more advanced LLM for a conversational, pastoral tone
+        # Here, we're using Mistral 7B, which is known for its efficiency and performance[1]
+        explainer = pipeline("text-generation", model="mistralai/Mistral-7B-v0.1")
+        detailed = explainer(full_explanation_prompt, max_length=300, do_sample=True)[0]['generated_text']
+
+        # Clean up and format
+        detailed_explanation = detailed.replace(full_explanation_prompt, "").strip()
+
+        return detailed_explanation
+
+    except ModuleNotFoundError:
+        return "Error: The 'transformers' library is not installed. Please install it using 'pip install transformers'."
+
+# Example input for testing
+verse_text = "Love is patient, love is kind. It does not envy, it does not boast, it is not proud."
+explanation = explain_bible_verse_detailed(verse_text)
+print(explanation)
 
 # Function to convert explanation to speech
 def text_to_speech(text):
