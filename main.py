@@ -20,13 +20,10 @@ def fetch_bible_verse(reference):
 # Load summarization pipeline
 def explain_bible_verse_detailed(verse_text):
     summarizer = pipeline("summarization")
-    base_explanation = summarizer(verse_text, max_length=80, min_length=40, do_sample=False)[0]['summary_text']
+    base_explanation = summarizer(verse_text, max_length=200, min_length=100)[0]['summary_text']
 
     detailed_explanation = (
         f"This Bible verse means: {base_explanation}\n\n"
-        f"For example, if this verse talks about love or patience, think of a time when you showed kindness even when it was difficult.\n"
-        f"The verse encourages values like faith, compassion, and integrity.\n\n"
-        f"The moral lesson here is to apply these values in daily life—by being kind, honest, and trusting God even in uncertain times."
     )
     return detailed_explanation
 
