@@ -1,9 +1,19 @@
 import streamlit as st
-from openai import OpenAI
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import requests
 from gtts import gTTS
 from io import BytesIO
 import base64
+
+# Load a free Hugging Face model (no API key required)
+@st.cache_resource
+def load_hf_model():
+    model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=True)  # Login required unless cached
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", use_auth_token=True)
+    return pipeline("text-generation", model=model, tokenizer=tokenizer)
+
+text_generator = load_hf_model()
 
 # Function to fetch a Bible verse from an API
 def fetch_bible_verse(reference):
@@ -17,37 +27,17 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Function to explain Bible verse using OpenAI GPT-3.5-Turbo (latest SDK)
-def explain_bible_verse_openai(verse_text, api_key):
-    client = OpenAI(api_key=api_key)
-
-    system_prompt = (
-        "You are a thoughtful and compassionate Bible teacher. "
-        "Explain the Bible verse provided in clear, detailed language. "
-        "Include a real-life example and a moral lesson."
+# Function to explain Bible verse using a Hugging Face model
+def explain_bible_verse_hf(verse_text):
+    prompt = (
+        f"You are a thoughtful and compassionate Bible teacher.\n"
+        f"Explain the Bible verse below clearly and in detail.\n"
+        f"Include real-life examples and moral lessons.\n\n"
+        f"BIBLE VERSE: \"{verse_text}\"\n\nEXPLANATION:"
     )
 
-    user_prompt = (
-        f"Bible Verse:\n\"{verse_text}\"\n\n"
-        "Please explain this verse like a pastor teaching a congregation. "
-        "Make it easy to understand, include a real-life example, and highlight the moral lessons."
-    )
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Accessible to all OpenAI users
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7,
-            max_tokens=500
-        )
-
-        explanation = response.choices[0].message.content.strip()
-        return explanation
-    except Exception as e:
-        return f"An error occurred while generating the explanation: {e}"
+    result = text_generator(prompt, max_new_tokens=300, temperature=0.7, do_sample=True)[0]['generated_text']
+    return result.replace(prompt, "").strip()
 
 # Function to convert explanation to speech
 def text_to_speech(text):
@@ -66,13 +56,13 @@ def get_audio_download_link(audio_bytes, filename):
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer with GPT-3.5")
+    st.title("📖 Bible Verse Explainer with Hugging Face Model")
 
     st.write("""
     Welcome! This app allows you to:
     1. Enter a Bible verse reference (e.g., John 3:16)
     2. Automatically fetch and display the verse
-    3. Get a detailed explanation with real-life examples and moral lessons (Powered by OpenAI GPT-3.5)
+    3. Get a detailed explanation with real-life examples and moral lessons (Powered by Hugging Face LLM)
     4. Listen to the explanation and download it as audio
     """)
 
@@ -83,10 +73,9 @@ def main():
     - Use only one verse reference at a time
     """)
 
-    openai_api_key = st.text_input("🔐 Enter your OpenAI API Key:", type="password")
     verse_ref = st.text_input("🔍 Enter Bible Verse Reference (e.g., John 3:16):")
 
-    if verse_ref and openai_api_key:
+    if verse_ref:
         with st.spinner("Fetching verse..."):
             verse_text = fetch_bible_verse(verse_ref)
 
@@ -94,8 +83,8 @@ def main():
             st.subheader("📜 Bible Verse")
             st.write(verse_text)
 
-            with st.spinner("Generating explanation using GPT-3.5..."):
-                explanation = explain_bible_verse_openai(verse_text, openai_api_key)
+            with st.spinner("Generating explanation using Hugging Face model..."):
+                explanation = explain_bible_verse_hf(verse_text)
             st.subheader("💬 Explanation")
             st.write(explanation)
 
@@ -108,7 +97,7 @@ def main():
         else:
             st.error(verse_text)
     else:
-        st.info("Please enter your OpenAI API key and a Bible verse reference above to begin.")
+        st.info("Please enter a Bible verse reference above to begin.")
 
 if __name__ == '__main__':
     main()
