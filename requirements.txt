@@ -3,3 +3,5 @@ transformers
 gtts 
 requests
 torch
+openai
+
