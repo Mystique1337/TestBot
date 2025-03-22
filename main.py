@@ -1,9 +1,19 @@
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import streamlit as st
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 from gtts import gTTS
 from io import BytesIO
 import base64
 import requests
+
+# Load Mistral-7B-Instruct model (open-source, no login needed)
+@st.cache_resource
+def load_mistral_model():
+    model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+    return pipeline("text-generation", model=model, tokenizer=tokenizer)
+
+llm = load_mistral_model()
 
 # Function to fetch a Bible verse from an API
 def fetch_bible_verse(reference):
@@ -17,17 +27,7 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-
-
-
-
-
-# Load the Mistral 7B Instruct model
-model_name = "mistralai/Mistral-7B-Instruct-v0.1"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
-
-generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
+# Function to explain Bible verse using Mistral
 
 def explain_bible_verse_mistral(verse_text):
     prompt = (
@@ -37,7 +37,7 @@ def explain_bible_verse_mistral(verse_text):
         f"EXPLANATION:[/INST]"
     )
 
-    result = generator(
+    result = llm(
         prompt,
         max_new_tokens=350,
         do_sample=True,
@@ -47,11 +47,7 @@ def explain_bible_verse_mistral(verse_text):
     )
 
     explanation = result[0]['generated_text'].replace(prompt, "").strip()
-    return detailed_explanation
-# Example input for testing
-verse_text = "Love is patient, love is kind. It does not envy, it does not boast, it is not proud."
-explanation = explain_bible_verse_detailed(verse_text)
-print(explanation)
+    return explanation
 
 # Function to convert explanation to speech
 def text_to_speech(text):
@@ -70,13 +66,13 @@ def get_audio_download_link(audio_bytes, filename):
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer with Moral Lessons")
+    st.title("📖 Bible Verse Explainer with Moral Lessons (Powered by Mistral 7B)")
 
     st.write("""
     Welcome! This app allows you to:
     1. Enter a Bible verse reference (e.g., John 3:16)
     2. Automatically fetch and display the verse
-    3. Get a detailed, conversational explanation with examples and moral lessons
+    3. Get a detailed explanation with real-life examples and moral lessons
     4. Listen to the explanation and download it as audio
     """)
 
@@ -97,8 +93,8 @@ def main():
             st.subheader("📜 Bible Verse")
             st.write(verse_text)
 
-            with st.spinner("Generating explanation..."):
-                explanation = explain_bible_verse_detailed(verse_text)
+            with st.spinner("Generating explanation with Mistral..."):
+                explanation = explain_bible_verse_mistral(verse_text)
             st.subheader("💬 Explanation")
             st.write(explanation)
 
