@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import requests
 from gtts import gTTS
 from io import BytesIO
@@ -17,9 +17,9 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Function to explain Bible verse using OpenAI GPT-4
+# Function to explain Bible verse using OpenAI GPT model (latest SDK)
 def explain_bible_verse_openai(verse_text, api_key):
-    openai.api_key = api_key
+    client = OpenAI(api_key=api_key)
 
     system_prompt = (
         "You are a thoughtful and compassionate Bible teacher. "
@@ -33,18 +33,21 @@ def explain_bible_verse_openai(verse_text, api_key):
         "Make it easy to understand, include a real-life example, and highlight the moral lessons."
     )
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.7,
-        max_tokens=500
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",  # Use "gpt-3.5-turbo" if you don't have GPT-4 access
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
 
-    explanation = response['choices'][0]['message']['content'].strip()
-    return explanation
+        explanation = response.choices[0].message.content.strip()
+        return explanation
+    except Exception as e:
+        return f"An error occurred while generating the explanation: {e}"
 
 # Function to convert explanation to speech
 def text_to_speech(text):
@@ -63,13 +66,13 @@ def get_audio_download_link(audio_bytes, filename):
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer with GPT-4")
+    st.title("📖 Bible Verse Explainer with GPT (New SDK)")
 
     st.write("""
     Welcome! This app allows you to:
     1. Enter a Bible verse reference (e.g., John 3:16)
     2. Automatically fetch and display the verse
-    3. Get a detailed explanation with real-life examples and moral lessons (Powered by GPT-4)
+    3. Get a detailed explanation with real-life examples and moral lessons (Powered by GPT)
     4. Listen to the explanation and download it as audio
     """)
 
@@ -91,7 +94,7 @@ def main():
             st.subheader("📜 Bible Verse")
             st.write(verse_text)
 
-            with st.spinner("Generating explanation using GPT-4..."):
+            with st.spinner("Generating explanation using GPT..."):
                 explanation = explain_bible_verse_openai(verse_text, openai_api_key)
             st.subheader("💬 Explanation")
             st.write(explanation)
