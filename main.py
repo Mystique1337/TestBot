@@ -1,21 +1,18 @@
 import streamlit as st
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from transformers import pipeline
 import requests
 from gtts import gTTS
 from io import BytesIO
 import base64
 
-# Load a small, open-access Hugging Face model
+# Load a small, open-access text generation model from Hugging Face
 @st.cache_resource
 def load_model():
-    model_name = "distilgpt2"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    return pipeline("text-generation", model=model, tokenizer=tokenizer)
+    return pipeline("text-generation", model="distilgpt2")
 
 text_generator = load_model()
 
-# Fetch Bible verse from API
+# Function to fetch a Bible verse from an API
 def fetch_bible_verse(reference):
     try:
         response = requests.get(f"https://bible-api.com/{reference.replace(' ', '%20')}")
@@ -27,13 +24,13 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Generate explanation using distilgpt2
+# Function to generate a simple explanation
 def explain_bible_verse(verse_text):
     prompt = (
-        f"Explain this Bible verse in simple terms, like a kind pastor teaching a child. "
-        f"Include a real-life example and a moral lesson:\n\n\"{verse_text}\"\nExplanation:"
+        f"Explain this Bible verse simply, like a kind teacher talking to a young person. "
+        f"Include a real-life example and a moral lesson:\n\nVerse: \"{verse_text}\"\nExplanation:"
     )
-    result = text_generator(prompt, max_new_tokens=150, temperature=0.9, do_sample=True)[0]["generated_text"]
+    result = text_generator(prompt, max_new_tokens=150, do_sample=True, temperature=0.9)[0]['generated_text']
     explanation = result.replace(prompt, "").strip()
     return explanation
 
@@ -45,21 +42,21 @@ def text_to_speech(text):
     mp3_fp.seek(0)
     return mp3_fp
 
-# Create audio download link
+# Download link for audio
 def get_audio_download_link(audio_bytes, filename):
     b64 = base64.b64encode(audio_bytes.read()).decode()
     href = f'<a href="data:audio/mp3;base64,{b64}" download="{filename}">Download Audio</a>'
     return href
 
-# Streamlit app
+# Streamlit interface
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer (Hugging Face GPT-2)")
+    st.title("📖 Bible Verse Explainer (Offline-Friendly)")
 
     st.markdown("""
-    👉 Enter a Bible verse (e.g., `John 3:16`)  
-    🤖 AI will explain it in simple words, with a real-life example and a moral lesson  
-    🎧 You can listen to the explanation and download it as audio
+    👉 Enter a Bible verse (e.g., `John 3:16`)
+    🤖 The app will fetch the verse, explain it simply, and give you a moral lesson
+    🎧 You'll also get an audio version of the explanation to listen to or download
     """)
 
     verse_ref = st.text_input("🔍 Enter Bible Verse Reference (e.g., John 3:16):")
