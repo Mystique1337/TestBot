@@ -35,7 +35,7 @@ def explain_bible_verse_openai(verse_text, api_key):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Use "gpt-3.5-turbo" if you don't have GPT-4 access
+            model="gpt-4o-mini",  # Use "gpt-3.5-turbo" if you don't have GPT-4 access
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
