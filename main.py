@@ -7,11 +7,13 @@ import base64
 
 # Load a free Hugging Face model (no API key required)
 @st.cache_resource
+@st.cache_resource
 def load_hf_model():
-    model_name = "mistralai/Mistral-7B-Instruct-v0.1"
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=True)  # Login required unless cached
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", use_auth_token=True)
+    model_name = "HuggingFaceH4/zephyr-7b-beta"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
     return pipeline("text-generation", model=model, tokenizer=tokenizer)
+
 
 text_generator = load_hf_model()
 
