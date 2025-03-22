@@ -34,7 +34,7 @@ def explain_bible_verse_openai(verse_text, api_key):
     )
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
