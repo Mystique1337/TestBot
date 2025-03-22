@@ -1,5 +1,5 @@
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import streamlit as st
-from transformers import pipeline
 from gtts import gTTS
 from io import BytesIO
 import base64
@@ -20,45 +20,34 @@ def fetch_bible_verse(reference):
 
 
 
-def explain_bible_verse_detailed(verse_text):
-    """
-    This function provides a detailed, context-rich explanation of a Bible verse using an advanced LLM.
-    It generates a summary, then crafts a detailed explanation with real-life examples and moral lessons.
-    """
-    try:
-        # Load the summarization pipeline
-        summarizer = pipeline("summarization")
-        
-        # Generate a detailed, natural summary
-        explanation_summary = summarizer(
-            verse_text,
-            max_length=120,
-            min_length=60,
-            do_sample=False
-        )[0]['summary_text']
 
-        # Build a context-rich, AI-driven teaching explanation
-        full_explanation_prompt = (
-            f"The following Bible verse is:\n\n\"{verse_text}\"\n\n"
-            f"Summarize it, explain it in detail like a pastor teaching a congregation, "
-            f"include real-life examples that help people relate to it, and highlight moral lessons from it.\n\n"
-            f"Here’s a summary: {explanation_summary}\n\n"
-            f"Now write a thoughtful explanation."
-        )
 
-        # Use a more advanced LLM for a conversational, pastoral tone
-        # Here, we're using Mistral 7B, which is known for its efficiency and performance[1]
-        explainer = pipeline("text-generation", model="mistralai/Mistral-7B-v0.1")
-        detailed = explainer(full_explanation_prompt, max_length=300, do_sample=True)[0]['generated_text']
+# Load the Mistral 7B Instruct model
+model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
 
-        # Clean up and format
-        detailed_explanation = detailed.replace(full_explanation_prompt, "").strip()
+generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
-        return detailed_explanation
+def explain_bible_verse_mistral(verse_text):
+    prompt = (
+        f"[INST]You are a kind and wise Bible teacher. Read the verse below and explain it clearly. "
+        f"Include a practical example and highlight the moral lessons.\n\n"
+        f"BIBLE VERSE:\n\"{verse_text}\"\n\n"
+        f"EXPLANATION:[/INST]"
+    )
 
-    except ModuleNotFoundError:
-        return "Error: The 'transformers' library is not installed. Please install it using 'pip install transformers'."
+    result = generator(
+        prompt,
+        max_new_tokens=350,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.95,
+        top_k=50
+    )
 
+    explanation = result[0]['generated_text'].replace(prompt, "").strip()
+    return detailed_explanation
 # Example input for testing
 verse_text = "Love is patient, love is kind. It does not envy, it does not boast, it is not proud."
 explanation = explain_bible_verse_detailed(verse_text)
