@@ -8,7 +8,7 @@ import requests
 # Load Mistral-7B-Instruct model (open-source, no login needed)
 @st.cache_resource
 def load_mistral_model():
-    model_name = "mistralai/Mistral-7B-Instruct-v0.1"
+    model_name = "tiiuae/falcon-7b-instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
     return pipeline("text-generation", model=model, tokenizer=tokenizer)
