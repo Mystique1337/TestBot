@@ -17,7 +17,7 @@ def fetch_bible_verse(reference):
     except:
         return "There was an error retrieving the verse."
 
-# Function to explain Bible verse using OpenAI GPT model (latest SDK)
+# Function to explain Bible verse using OpenAI GPT-3.5-Turbo (latest SDK)
 def explain_bible_verse_openai(verse_text, api_key):
     client = OpenAI(api_key=api_key)
 
@@ -35,7 +35,7 @@ def explain_bible_verse_openai(verse_text, api_key):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use "gpt-3.5-turbo" if you don't have GPT-4 access
+            model="gpt-3.5-turbo",  # Accessible to all OpenAI users
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -66,13 +66,13 @@ def get_audio_download_link(audio_bytes, filename):
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Bible Verse Explainer", layout="centered")
-    st.title("📖 Bible Verse Explainer with GPT (New SDK)")
+    st.title("📖 Bible Verse Explainer with GPT-3.5")
 
     st.write("""
     Welcome! This app allows you to:
     1. Enter a Bible verse reference (e.g., John 3:16)
     2. Automatically fetch and display the verse
-    3. Get a detailed explanation with real-life examples and moral lessons (Powered by GPT)
+    3. Get a detailed explanation with real-life examples and moral lessons (Powered by OpenAI GPT-3.5)
     4. Listen to the explanation and download it as audio
     """)
 
@@ -94,7 +94,7 @@ def main():
             st.subheader("📜 Bible Verse")
             st.write(verse_text)
 
-            with st.spinner("Generating explanation using GPT..."):
+            with st.spinner("Generating explanation using GPT-3.5..."):
                 explanation = explain_bible_verse_openai(verse_text, openai_api_key)
             st.subheader("💬 Explanation")
             st.write(explanation)
