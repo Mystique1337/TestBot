@@ -3,4 +3,4 @@ transformers
 torch
 gtts
 requests
-openai ==0.28
+openai 
